@@ -43,7 +43,7 @@ class GmailImapTransport(ImapTransport):
                 pass
             except AccessTokenNotFound:
                 raise ValueError(
-                    "No Token available in python-social-auth for %s" % (
+                    "No Token available for %s" % (
                         username
                     )
                 )
