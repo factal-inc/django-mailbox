@@ -2,6 +2,7 @@ import logging
 import requests
 
 from django.conf import settings
+from django.core.exceptions ObjectDoesNotExist
 
 try:
     from social_django.models import UserSocialAuth
@@ -46,7 +47,7 @@ def get_google_account(email, key=None):
                 f"installed and a social account record for {email} exists.")
 
         return me.extra_data[key] if key else me
-    except (UserSocialAuth.DoesNotExist, SocialAccount.DoesNotExist, KeyError):
+    except (ObjectDoesNotExist, KeyError):
         raise RefreshTokenNotFound if key == "refresh_token" else AccessTokenNotFound
 
 
