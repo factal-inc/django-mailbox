@@ -53,7 +53,10 @@ def get_google_account(email, key=None):
 
 def get_google_access_token(email):
     # TODO: This should be cacheable
-    return get_google_account(email, key="token")
+    try:
+        return get_google_account(email, key="token")
+    except AccessTokenNotFound:
+        return get_google_account(email, key="access_token")
 
 
 def update_google_extra_data(email, extra_data):
