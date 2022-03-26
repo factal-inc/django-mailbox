@@ -38,7 +38,8 @@ jobs:
     python: 3.7
   - env: TOX_ENV=django30-py38 INTEGRATION=1
     python: 3.8
-  - env: TOX_ENV=django30-py39
+  # Django 3.2 support Python 3.6., 3.7, 3.8, 3.9
+  - env: TOX_ENV=django32-py39
     python: 3.9
 
 install:
