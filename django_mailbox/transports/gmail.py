@@ -16,7 +16,11 @@ class GmailImapTransport(ImapTransport):
             logger.warning("Couldn't do oauth2 because %s" % e)
             self.server = self.transport(self.hostname, self.port)
             typ, msg = self.server.login(username, password)
-            self.server.select()
+
+            if self.folder:
+                self.server.select(self.folder)
+            else:
+                self.server.select()
 
     def _connect_oauth(self, username):
         # username should be an email address that has already been authorized
@@ -43,7 +47,7 @@ class GmailImapTransport(ImapTransport):
                 pass
             except AccessTokenNotFound:
                 raise ValueError(
-                    "No Token available in python-social-auth for %s" % (
+                    "No Token available for %s" % (
                         username
                     )
                 )
@@ -54,4 +58,8 @@ class GmailImapTransport(ImapTransport):
         )
         self.server = self.transport(self.hostname, self.port)
         self.server.authenticate('XOAUTH2', lambda x: auth_string)
-        self.server.select()
+
+        if self.folder:
+            self.server.select(self.folder)
+        else:
+            self.server.select()

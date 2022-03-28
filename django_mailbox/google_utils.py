@@ -1,8 +1,18 @@
 import logging
+import requests
 
 from django.conf import settings
-import requests
-from social.apps.django_app.default.models import UserSocialAuth
+from django.core.exceptions import ObjectDoesNotExist
+
+try:
+    from social_django.models import UserSocialAuth
+except ImportError:
+    UserSocialAuth = None
+
+try:
+    from allauth.socialaccount.models import SocialAccount, SocialApp
+except ImportError:
+    SocialAccount, SocialApp = None, None
 
 
 logger = logging.getLogger(__name__)
@@ -24,30 +34,39 @@ def get_google_consumer_secret():
     return settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
 
 
+def get_google_account(email, key=None):
+    try:
+        if SocialAccount:
+            me = SocialAccount.objects.get(uid=email, provider="google")
+        elif UserSocialAuth:
+            me = UserSocialAuth.objects.get(uid=email, provider="google-oauth2")
+        else:
+            raise RuntimeError(
+                "Could not retrieve social account record. " \
+                "Make sure either social-app-django or django-allauth are " \
+                f"installed and a social account record for {email} exists.")
+
+        return me.extra_data[key] if key else me
+    except (ObjectDoesNotExist, KeyError):
+        raise RefreshTokenNotFound if key == "refresh_token" else AccessTokenNotFound
+
+
 def get_google_access_token(email):
     # TODO: This should be cacheable
     try:
-        me = UserSocialAuth.objects.get(uid=email, provider="google-oauth2")
-        return me.extra_data['access_token']
-    except (UserSocialAuth.DoesNotExist, KeyError):
-        raise AccessTokenNotFound
+        return get_google_account(email, key="token")
+    except AccessTokenNotFound:
+        return get_google_account(email, key="access_token")
 
 
 def update_google_extra_data(email, extra_data):
-    try:
-        me = UserSocialAuth.objects.get(uid=email, provider="google-oauth2")
-        me.extra_data = extra_data
-        me.save()
-    except (UserSocialAuth.DoesNotExist, KeyError):
-        raise AccessTokenNotFound
+    me = get_google_account(email)
+    me.extra_data = extra_data
+    me.save()
 
 
 def get_google_refresh_token(email):
-    try:
-        me = UserSocialAuth.objects.get(uid=email, provider="google-oauth2")
-        return me.extra_data['refresh_token']
-    except (UserSocialAuth.DoesNotExist, KeyError):
-        raise RefreshTokenNotFound
+    return get_google_account(email, key="refresh_token")
 
 
 def google_api_get(email, url):
@@ -72,9 +91,11 @@ def google_api_post(email, url, post_data, authorized=True):
     # TODO: Make this a lot less ugly. especially the 401 handling
     headers = dict()
     if authorized is True:
-        headers.update(dict(
-            Authorization="Bearer %s" % get_google_access_token(email),
-        ))
+        headers.update(
+            dict(
+                Authorization="Bearer %s" % get_google_access_token(email),
+            )
+        )
     r = requests.post(url, headers=headers, data=post_data)
     if r.status_code == 401:
         refresh_authorization(email)
@@ -92,20 +113,20 @@ def refresh_authorization(email):
         refresh_token=refresh_token,
         client_id=get_google_consumer_key(),
         client_secret=get_google_consumer_secret(),
-        grant_type='refresh_token',
+        grant_type="refresh_token",
     )
     results = google_api_post(
         email,
         "https://accounts.google.com/o/oauth2/token?access_type=offline",
         post_data,
-        authorized=False)
-    results.update({'refresh_token': refresh_token})
+        authorized=False,
+    )
+    results.update({"refresh_token": refresh_token})
     update_google_extra_data(email, results)
 
 
 def fetch_user_info(email):
     result = google_api_get(
-        email,
-        "https://www.googleapis.com/oauth2/v1/userinfo?alt=json"
+        email, "https://www.googleapis.com/oauth2/v1/userinfo?alt=json"
     )
     return result
