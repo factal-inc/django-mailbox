@@ -24,7 +24,7 @@ jobs:
     python: 3.9
 
 install:
-  - pip uninstall importlib_metadata
+  - pip uninstall -y importlib_metadata
   - pip install tox
 
 script:
