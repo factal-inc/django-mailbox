@@ -24,7 +24,7 @@ jobs:
     python: 3.9
 
 install:
-  - pip install setuptools==60.9.3
+  - pip uninstall importlib_metadata
   - pip install tox
 
 script:
