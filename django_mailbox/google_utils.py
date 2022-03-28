@@ -2,7 +2,7 @@ import logging
 import requests
 
 from django.conf import settings
-from django.core.exceptions ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 
 try:
     from social_django.models import UserSocialAuth
